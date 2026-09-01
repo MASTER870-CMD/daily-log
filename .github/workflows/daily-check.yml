@@ -30,7 +30,7 @@ jobs:
         run: python check_commits.py
 
       - name: Generate and commit 10 fallback entries
-        # if: steps.check.outputs.has_commits == 'false'
+         if: steps.check.outputs.has_commits == 'false'
         env:
           CONTENT_MODE: til   # til | snippet | log
         run: |
