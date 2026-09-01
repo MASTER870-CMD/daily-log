@@ -1,0 +1,47 @@
+name: Daily commit check
+
+on:
+  schedule:
+    # 15:30 UTC = 9:00 PM IST. Adjust if you're in a different timezone.
+    - cron: '30 15 * * *'
+  workflow_dispatch: {}   # lets you trigger it manually to test
+
+permissions:
+  contents: write
+
+jobs:
+  check-and-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install deps
+        run: pip install requests
+
+      - name: Check today's commit activity
+        id: check
+        env:
+          GH_USERNAME: ${{ github.repository_owner }}
+          GH_PAT: ${{ secrets.DAILY_CHECK_PAT }}
+        run: python check_commits.py
+
+      - name: Generate and commit 10 fallback entries
+        if: steps.check.outputs.has_commits == 'false'
+        env:
+          CONTENT_MODE: til   # til | snippet | log
+        run: |
+          git config user.name "daily-log-bot"
+          git config user.email "actions@users.noreply.github.com"
+          
+          for i in {1..10}; do
+            python generate_entry.py
+            git add log/
+            git commit -m "$(cat /tmp/commit_message.txt) - commit $i of 10"
+            sleep 1
+          done
+          
+          git push
